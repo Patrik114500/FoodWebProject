@@ -107,13 +107,3 @@ Below are the population dynamics plots for each model variant:
 
 ![Unified System Interface](UAgent.png)
 
-## References
-
-For a deeper understanding of Lotka-Volterra equations and multi-dimensional food web models, refer to:
-
-- Generalized Lotka-Volterra Equations for sustainable food webs: [PLoS Computational Biology](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1004727)
-- Multi-dimensional Lotka-Volterra food web models: [University of Illinois](https://math.illinois.edu/research/igl/projects/spring/2018/analysis-multidimensional-lotka-volterra-food-web-models)
-
----
-
-This README provides an overview of the project, descriptions of the simulation files, and visual demos for each model. Adjustments can be made based on specific research needs or user preferences.
