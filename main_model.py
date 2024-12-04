@@ -1,7 +1,14 @@
+import numpy as np
+
 import random
+
 import matplotlib.pyplot as plt
 from itertools import product
 from tqdm import tqdm
+
+import concurrent.futures
+import time
+import json
 
 # Cell class for grid management
 class Cell:
@@ -136,12 +143,13 @@ class DynamicSpeciesSimulation:
 
 # Hyperparameter optimizer with extinction-avoiding fitness metric
 class HyperparameterOptimizer:
-    def __init__(self, grid_size, steps, species_addition_interval, max_population_threshold, param_ranges):
+    def __init__(self, grid_size, steps, species_addition_interval, max_population_threshold, param_ranges, max_threads):
         self.grid_size = grid_size
         self.steps = steps
         self.species_addition_interval = species_addition_interval
         self.max_population_threshold = max_population_threshold
         self.param_ranges = param_ranges
+        self.max_threads = max_threads
 
     def run_simulation(self, params):
         initial_populations = [
@@ -160,6 +168,7 @@ class HyperparameterOptimizer:
         fitness = -sum(abs(max(history) - min(history)) for history in population_history if len(history) > 0)
         return fitness
 
+    '''
     def grid_search(self):
         best_params = None
         best_fitness = float('-inf')
@@ -168,6 +177,8 @@ class HyperparameterOptimizer:
         with tqdm(total=len(param_combinations), desc="Grid Search Progress") as pbar:
             for combination in param_combinations:
                 params = {key: combination[i] for i, key in enumerate(self.param_ranges.keys())}
+
+                
                 fitness = self.run_simulation(params)
 
                 if fitness > best_fitness:
@@ -180,7 +191,32 @@ class HyperparameterOptimizer:
         print(f"Best parameters: {best_params}")
         print(f"Best fitness: {best_fitness}")
         return best_params, best_fitness
+        '''
 
+    def grid_search(self):
+        best_params = None
+        best_fitness = float('-inf')
+
+        param_combinations = list(product(*self.param_ranges.values()))
+        params_all = [{key: combination[i] for i, key in enumerate(self.param_ranges.keys())} for combination in param_combinations]
+        
+        results = []
+
+        with concurrent.futures.ThreadPoolExecutor(self.max_threads) as executor:
+            future_to_params = {executor.submit(self.run_simulation, params): params for params in params_all}
+
+            for future in concurrent.futures.as_completed(future_to_params):
+                params = future_to_params[future]
+                try:
+                    fitness = future.result()
+                    results.append([params, fitness])
+                    print(f"Simulation terminated for params: {params}")
+                except Exception as exc:
+                    print(f"Simulation with params {params} generated an exception: {exc}")
+
+        
+        results.sort(key = lambda x: x[1])
+        return results[0]
 
 # Hyperparameter optimization
 param_ranges = {
@@ -191,12 +227,22 @@ param_ranges = {
     "foxes_predation": [0.3, 0.4, 0.5],
 }
 
+'''
+param_ranges = {
+    "rabbits_population": np.linspace(10, 50, 41, dtype = int),
+    "rabbits_reproduction": np.linspace(0.1, 2, 20),
+    "foxes_population": np.linspace(3, 25, 22, dtype = int),
+    "foxes_reproduction": np.linspace(0.05, 1, 20),
+    "foxes_predation": np.linspace(0.1, 2, 20),
+}'''
+
 optimizer = HyperparameterOptimizer(
     grid_size=20,
     steps=1000,
     species_addition_interval=500,
     max_population_threshold=7000,
-    param_ranges=param_ranges
+    param_ranges=param_ranges,
+    max_threads = 20
 )
 
 best_params, best_fitness = optimizer.grid_search()
